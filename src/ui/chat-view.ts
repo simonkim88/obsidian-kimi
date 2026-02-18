@@ -40,6 +40,7 @@ export class KimiChatView extends ItemView {
     }
 
     async onOpen() {
+        console.log('KimiChatView: Opening view (v1.0.4)');
         this.containerEl.empty();
         this.buildInterface();
     }
