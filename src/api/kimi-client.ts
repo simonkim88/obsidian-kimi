@@ -12,8 +12,9 @@ export class KimiClient {
 
     constructor(apiKey: string, config: KimiConfig) {
         this.client = new OpenAI({
-            apiKey: apiKey,
+            apiKey: apiKey || 'dummy', // Prevent crash on empty key
             baseURL: 'https://api.moonshot.ai/v1',
+            dangerouslyAllowBrowser: true // Required for Obsidian environment
         });
         this.config = config;
     }
@@ -24,13 +25,14 @@ export class KimiClient {
 
     updateApiKey(apiKey: string) {
         this.client = new OpenAI({
-            apiKey: apiKey,
+            apiKey: apiKey || 'dummy',
             baseURL: 'https://api.moonshot.ai/v1',
+            dangerouslyAllowBrowser: true
         });
     }
 
     async generate(prompt: string, context?: string): Promise<string> {
-        const fullPrompt = context 
+        const fullPrompt = context
             ? `Context:\n${context}\n\nUser: ${prompt}`
             : prompt;
 
@@ -50,11 +52,11 @@ export class KimiClient {
     }
 
     async generateStream(
-        prompt: string, 
+        prompt: string,
         onChunk: (chunk: string) => void,
         context?: string
     ): Promise<void> {
-        const fullPrompt = context 
+        const fullPrompt = context
             ? `Context:\n${context}\n\nUser: ${prompt}`
             : prompt;
 
@@ -79,7 +81,7 @@ export class KimiClient {
         }
     }
 
-    async chat(messages: Array<{role: 'user' | 'assistant', content: string}>): Promise<string> {
+    async chat(messages: Array<{ role: 'user' | 'assistant', content: string }>): Promise<string> {
         try {
             const response = await this.client.chat.completions.create({
                 model: this.config.model,
@@ -114,7 +116,7 @@ export class KimiClient {
     async suggestLinks(content: string, existingNotes: string[]): Promise<string[]> {
         const prompt = `Based on the content, suggest relevant links from: ${existingNotes.join(', ')}\n\nContent:\n${content}\n\nSuggested links (in [[Note Name]] format):`;
         const response = await this.generate(prompt);
-        
+
         // Parse wikilinks from response
         const links: string[] = [];
         const regex = /\[\[([^\]]+)\]\]/g;
