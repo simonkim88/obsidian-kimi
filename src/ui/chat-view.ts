@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, Menu, Notice, MarkdownView } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFile, Menu, Notice, MarkdownView, ButtonComponent } from 'obsidian';
 import ObsidianKimiPlugin from '../../main';
 
 export const VIEW_TYPE_KIMI_CHAT = 'kimi-chat-view';
@@ -15,6 +15,12 @@ export class KimiChatView extends ItemView {
     inputValue: string = '';
     isGenerating: boolean = false;
     attachedFiles: TFile[] = [];
+
+    // UI Elements
+    private messagesContainer: HTMLElement;
+    private inputEl: HTMLTextAreaElement;
+    private sendBtn: HTMLButtonElement;
+    private attachmentsContainer: HTMLElement;
 
     constructor(leaf: WorkspaceLeaf, plugin: ObsidianKimiPlugin) {
         super(leaf);
@@ -35,14 +41,14 @@ export class KimiChatView extends ItemView {
 
     async onOpen() {
         this.containerEl.empty();
-        this.render();
+        this.buildInterface();
     }
 
     async onClose() {
         // Cleanup if needed
     }
 
-    render() {
+    private buildInterface() {
         const container = this.containerEl.createDiv('kimi-chat-container');
 
         // Header
@@ -53,14 +59,86 @@ export class KimiChatView extends ItemView {
         modeIndicator.textContent = `Mode: ${this.plugin.settings.permissionMode}`;
 
         // Messages area
-        const messagesArea = container.createDiv('kimi-messages-area');
-        this.renderMessages(messagesArea);
+        this.messagesContainer = container.createDiv('kimi-messages-area');
+        this.renderWelcomeMessage();
 
-        // Attached files
+        // Attached files area
+        this.attachmentsContainer = container.createDiv('kimi-attachments');
+        this.renderAttachments();
+
+        // Input area
+        const inputArea = container.createDiv('kimi-input-area');
+
+        this.inputEl = inputArea.createEl('textarea', {
+            cls: 'kimi-chat-input',
+            placeholder: 'Ask Kimi anything... (@ to mention files, / for commands)'
+        });
+        this.inputEl.rows = 3;
+
+        this.inputEl.addEventListener('input', (e) => {
+            this.inputValue = (e.target as HTMLTextAreaElement).value;
+            this.handleInputChange(this.inputValue);
+        });
+
+        this.inputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.sendMessage();
+            }
+        });
+
+        // Toolbar
+        const toolbar = inputArea.createDiv('kimi-toolbar');
+
+        const toolbarLeft = toolbar.createDiv('kimi-toolbar-left');
+
+        const attachBtn = toolbarLeft.createEl('button', {
+            cls: 'kimi-toolbar-btn',
+            text: '@ Attach'
+        });
+        attachBtn.onclick = () => this.showFileMenu(attachBtn);
+
+        const pinBtn = toolbarLeft.createEl('button', {
+            cls: 'kimi-toolbar-btn',
+            text: '📌 Pin Current'
+        });
+        pinBtn.onclick = () => this.pinCurrentNote();
+
+        this.sendBtn = toolbar.createEl('button', {
+            cls: 'kimi-send-btn',
+            text: 'Send'
+        });
+        this.sendBtn.onclick = () => this.sendMessage();
+
+        // Add styles
+        this.addStyles();
+    }
+
+    private renderWelcomeMessage() {
+        if (this.messages.length === 0) {
+            this.messagesContainer.empty();
+            const welcome = this.messagesContainer.createDiv('kimi-welcome');
+            welcome.innerHTML = `
+                <h4>Welcome to Obsidian Kimi!</h4>
+                <p>I can help you with:</p>
+                <ul>
+                    <li>✍️ Writing and editing notes</li>
+                    <li>📊 Summarizing content</li>
+                    <li>🔗 Suggesting links</li>
+                    <li>🇨🇳 Translating Chinese</li>
+                    <li>💭 Answering questions</li>
+                </ul>
+                <p class="kimi-hint">Tip: Use @ to attach files, 📌 to pin context</p>
+            `;
+        }
+    }
+
+    private renderAttachments() {
+        this.attachmentsContainer.empty();
+
         if (this.attachedFiles.length > 0) {
-            const attachmentsDiv = container.createDiv('kimi-attachments');
             this.attachedFiles.forEach(file => {
-                const chip = attachmentsDiv.createDiv('kimi-file-chip');
+                const chip = this.attachmentsContainer.createDiv('kimi-file-chip');
                 chip.textContent = file.name;
 
                 const pinBtn = chip.createSpan('kimi-pin-btn');
@@ -75,103 +153,64 @@ export class KimiChatView extends ItemView {
                 removeBtn.textContent = '×';
                 removeBtn.onclick = () => {
                     this.attachedFiles = this.attachedFiles.filter(f => f !== file);
-                    this.render();
+                    this.renderAttachments();
                 };
             });
         }
-
-        // Input area
-        const inputArea = container.createDiv('kimi-input-area');
-
-        const input = inputArea.createEl('textarea', {
-            cls: 'kimi-chat-input',
-            placeholder: 'Ask Kimi anything... (@ to mention files, / for commands)'
-        });
-        input.value = this.inputValue;
-        input.rows = 3;
-
-        input.addEventListener('input', (e) => {
-            this.inputValue = (e.target as HTMLTextAreaElement).value;
-            this.handleInputChange(this.inputValue);
-        });
-
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                this.sendMessage();
-            }
-        });
-
-        // Toolbar
-        const toolbar = inputArea.createDiv('kimi-toolbar');
-
-        const attachBtn = toolbar.createEl('button', {
-            cls: 'kimi-toolbar-btn',
-            text: '@ Attach'
-        });
-        attachBtn.onclick = () => this.showFileMenu(attachBtn);
-
-        const pinBtn = toolbar.createEl('button', {
-            cls: 'kimi-toolbar-btn',
-            text: '📌 Pin Current'
-        });
-        pinBtn.onclick = () => this.pinCurrentNote();
-
-        const sendBtn = toolbar.createEl('button', {
-            cls: 'kimi-send-btn',
-            text: this.isGenerating ? '...' : 'Send'
-        });
-        sendBtn.disabled = this.isGenerating;
-        sendBtn.onclick = () => this.sendMessage();
-
-        // Add styles
-        this.addStyles();
     }
 
-    renderMessages(container: HTMLElement) {
-        container.empty();
-
-        if (this.messages.length === 0) {
-            const welcome = container.createDiv('kimi-welcome');
-            welcome.innerHTML = `
-                <h4>Welcome to Obsidian Kimi!</h4>
-                <p>I can help you with:</p>
-                <ul>
-                    <li>✍️ Writing and editing notes</li>
-                    <li>📊 Summarizing content</li>
-                    <li>🔗 Suggesting links</li>
-                    <li>🇨🇳 Translating Chinese</li>
-                    <li>💭 Answering questions</li>
-                </ul>
-                <p class="kimi-hint">Tip: Use @ to attach files, 📌 to pin context</p>
-            `;
-            return;
+    private appendMessage(msg: Message) {
+        // Remove welcome message if it exists
+        if (this.messagesContainer.querySelector('.kimi-welcome')) {
+            this.messagesContainer.empty();
         }
 
-        this.messages.forEach(msg => {
-            const msgDiv = container.createDiv(`kimi-message kimi-message-${msg.role}`);
+        const msgDiv = this.messagesContainer.createDiv(`kimi-message kimi-message-${msg.role}`);
 
-            const header = msgDiv.createDiv('kimi-message-header');
-            header.textContent = msg.role === 'user' ? 'You' : '🦊 Kimi';
+        const header = msgDiv.createDiv('kimi-message-header');
+        header.textContent = msg.role === 'user' ? 'You' : '🦊 Kimi';
 
-            const content = msgDiv.createDiv('kimi-message-content');
-            content.innerHTML = this.formatMessage(msg.content);
+        const content = msgDiv.createDiv('kimi-message-content');
+        content.innerHTML = this.formatMessage(msg.content);
 
-            if (msg.role === 'assistant') {
-                const actions = msgDiv.createDiv('kimi-message-actions');
-                const copyBtn = actions.createEl('button', { text: 'Copy' });
-                copyBtn.onclick = () => {
-                    navigator.clipboard.writeText(msg.content);
-                    new Notice('Copied!');
-                };
+        if (msg.role === 'assistant') {
+            const actions = msgDiv.createDiv('kimi-message-actions');
+            const copyBtn = actions.createEl('button', { text: 'Copy' });
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(msg.content);
+                new Notice('Copied!');
+            };
 
-                const insertBtn = actions.createEl('button', { text: 'Insert to Note' });
-                insertBtn.onclick = () => this.insertToNote(msg.content);
+            const insertBtn = actions.createEl('button', { text: 'Insert to Note' });
+            insertBtn.onclick = () => this.insertToNote(msg.content);
+        }
+
+        this.scrollToBottom();
+    }
+
+    private updateLastMessage(content: string) {
+        const lastMsg = this.messagesContainer.lastElementChild;
+        if (lastMsg) {
+            const contentDiv = lastMsg.querySelector('.kimi-message-content');
+            if (contentDiv) {
+                contentDiv.innerHTML = this.formatMessage(content);
+                this.scrollToBottom();
             }
-        });
+        }
+    }
 
-        // Scroll to bottom
-        container.scrollTop = container.scrollHeight;
+    private scrollToBottom() {
+        this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+    }
+
+    private setGenerating(generating: boolean) {
+        this.isGenerating = generating;
+        this.sendBtn.disabled = generating;
+        this.sendBtn.textContent = generating ? '...' : 'Send';
+
+        if (!generating) {
+            this.inputEl.focus();
+        }
     }
 
     formatMessage(content: string): string {
@@ -200,21 +239,23 @@ export class KimiChatView extends ItemView {
     async sendMessage() {
         if (!this.inputValue.trim() || this.isGenerating) return;
 
-        const userMessage = this.inputValue.trim();
+        const userMessageContent = this.inputValue.trim();
+
+        // Clear input
         this.inputValue = '';
-        this.render();
+        this.inputEl.value = '';
 
-        // Add user message
-        this.messages.push({
+        // Add user message to UI and state
+        const userMsg: Message = {
             role: 'user',
-            content: userMessage,
+            content: userMessageContent,
             timestamp: new Date()
-        });
-        this.render();
+        };
+        this.messages.push(userMsg);
+        this.appendMessage(userMsg);
 
-        // Generate response
-        this.isGenerating = true;
-        this.render();
+        // Set state to generating
+        this.setGenerating(true);
 
         try {
             // Get context
@@ -234,36 +275,40 @@ export class KimiChatView extends ItemView {
 
             let response = '';
 
+            // Create a placeholder for assistant message
+            const assistantMsg: Message = {
+                role: 'assistant',
+                content: '...',
+                timestamp: new Date()
+            };
+            this.messages.push(assistantMsg);
+            this.appendMessage(assistantMsg);
+
             // Stream response
             await this.plugin.kimiClient.generateStream(
-                userMessage,
+                userMessageContent,
                 (chunk) => {
                     response += chunk;
-                    // Update last message if it's assistant
-                    const lastMsg = this.messages[this.messages.length - 1];
-                    if (lastMsg.role === 'assistant') {
-                        lastMsg.content = response;
-                    } else {
-                        this.messages.push({
-                            role: 'assistant',
-                            content: response,
-                            timestamp: new Date()
-                        });
-                    }
-                    this.render();
+
+                    // Update last message in state
+                    this.messages[this.messages.length - 1].content = response;
+
+                    // Update UI
+                    this.updateLastMessage(response);
                 },
                 fullContext || undefined
             );
 
         } catch (error) {
-            this.messages.push({
+            const errorMsg: Message = {
                 role: 'assistant',
                 content: `Error: ${error.message}`,
                 timestamp: new Date()
-            });
+            };
+            this.messages.push(errorMsg);
+            this.appendMessage(errorMsg);
         } finally {
-            this.isGenerating = false;
-            this.render();
+            this.setGenerating(false);
         }
     }
 
@@ -278,7 +323,7 @@ export class KimiChatView extends ItemView {
                     .onClick(() => {
                         if (!this.attachedFiles.find(f => f.path === file.path)) {
                             this.attachedFiles.push(file);
-                            this.render();
+                            this.renderAttachments();
                         }
                     });
             });
@@ -442,6 +487,10 @@ export class KimiChatView extends ItemView {
                 display: flex;
                 justify-content: space-between;
                 margin-top: 5px;
+            }
+            .kimi-toolbar-left {
+                display: flex;
+                gap: 5px;
             }
             .kimi-toolbar-btn {
                 padding: 5px 10px;
