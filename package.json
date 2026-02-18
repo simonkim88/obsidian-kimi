@@ -1,6 +1,6 @@
 {
   "name": "obsidian-kimi",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Kimi K2.5 integration for Obsidian",
   "main": "main.js",
   "scripts": {
