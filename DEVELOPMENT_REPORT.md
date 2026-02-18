@@ -9,7 +9,7 @@ obsidian-code 스타일의 **Kimi K2.5 통합 플러그인** 개발이 완료되
 ## 📁 생성된 파일 구조
 
 ```
-/Users/simon/.openclaw/obsidian-kimi-plugin/
+obsidian-kimi-plugin/
 ├── manifest.json                    # 플러그인 메타데이터
 ├── package.json                     # npm 설정
 ├── tsconfig.json                    # TypeScript 설정
@@ -73,30 +73,58 @@ obsidian-code 스타일의 **Kimi K2.5 통합 플러그인** 개발이 완료되
 
 ---
 
-## 🔧 설치 방법
+## 🔧 설치 및 빌드 방법 (Windows)
 
-### 1. 빌드
-```bash
-cd /Users/simon/.openclaw/obsidian-kimi-plugin
+이 플러그인은 TypeScript로 개발되었으며, 사용하기 위해서는 **빌드(Build)** 과정이 필요합니다.
+
+### 1. 필수 요구사항
+- **Node.js**: 최신 버전 설치 (https://nodejs.org/)
+- **Git**: 소스 코드 다운로드용 (옵션)
+
+### 2. 소스 코드 다운로드
+```powershell
+git clone https://github.com/simonkim88/obsidian-kimi.git
+cd obsidian-kimi
+```
+
+### 3. 의존성 설치 및 빌드
+터미널(PowerShell 또는 CMD)에서 다음 명령어를 실행합니다:
+
+```powershell
+# 의존성 라이브러리 설치
 npm install
+
+# 플러그인 빌드 (main.js 생성)
 npm run build
 ```
 
-### 2. Obsidian에 설치
-```bash
-# Obsidian plugins 폴더로 복사
-cp -r /Users/simon/.openclaw/obsidian-kimi-plugin \
-  ~/Documents/SimonObsidian/.obsidian/plugins/obsidian-kimi
+빌드가 성공하면 `main.js`, `styles.css`, `manifest.json` 파일이 준비됩니다.
 
-# 또는 심볼릭 링크
-ln -s /Users/simon/.openclaw/obsidian-kimi-plugin \
-  ~/Documents/SimonObsidian/.obsidian/plugins/obsidian-kimi
-```
+### 4. Obsidian에 설치
 
-### 3. 활성화
+빌드된 파일을 Obsidian의 플러그인 폴더로 복사해야 합니다.
+
+1.  **Obsidian 플러그인 폴더 찾기**:
+    - Obsidian을 엽니다.
+    - 설정(Settings) > 커뮤니티 플러그인(Community Plugins) > 폴더 아이콘(Open plugins folder) 클릭.
+    - 탐색기가 열리면 `obsidian-kimi`라는 새 폴더를 만듭니다.
+
+2.  **파일 복사**:
+    - 빌드한 폴더에서 `main.js`, `styles.css`, `manifest.json` 세 파일을 방금 만든 `obsidian-kimi` 폴더로 복사합니다.
+
+    **PowerShell 명령어 예시**:
+    ```powershell
+    # 예: Obsidian 보관함이 "Documents\MyVault"에 있는 경우
+    $VaultPath = "$HOME\Documents\MyVault\.obsidian\plugins\obsidian-kimi"
+    mkdir $VaultPath -Force
+    copy main.js, styles.css, manifest.json $VaultPath
+    ```
+
+### 5. 활성화
 1. Obsidian 설정 → 커뮤니티 플러그인
-2. "Obsidian Kimi" 찾아서 활성화
-3. API 키 입력 (https://platform.moonshot.ai/)
+2. "새로고침(Refresh)" 클릭
+3. "Obsidian Kimi" 목록에 나타나면 토글 스위치를 켜서 **활성화**
+4. 설정 버튼(⚙️)을 눌러 API 키 입력 (https://platform.moonshot.ai/)
 
 ---
 
@@ -104,18 +132,18 @@ ln -s /Users/simon/.openclaw/obsidian-kimi-plugin \
 
 ### 채팅 시작
 - 왼쪽 리본의 🤖 아이콘 클릭
-- 또는 Command Palette → "Open Kimi Chat"
+- 또는 `Ctrl+P` (Command Palette) → "Open Kimi Chat" 입력
 
 ### 노트 요약
 1. 노트 열기
-2. Command Palette → "Kimi: Summarize current note"
+2. `Ctrl+P` → "Kimi: Summarize current note"
 3. 요약이 노트 상단에 추가됨
 
 ### 인라인 편집
 1. 텍스트 선택
-2. Command Palette → "Kimi: Edit selection"
-3. 편집 지시사항 입력
-4. 자동으로 교첱
+2. `Ctrl+P` → "Kimi: Edit selection"
+3. 편집 지시사항 입력 (예: "더 간결하게 수정해줘", "영어로 번역해줘")
+4. 자동으로 교체됨
 
 ### 파일 첨부 (@)
 1. 채팅창에서 @ 입력
@@ -154,21 +182,6 @@ ln -s /Users/simon/.openclaw/obsidian-kimi-plugin \
 
 ---
 
-## 🆚 obsidian-code와 비교
-
-| 기능 | obsidian-code (Claude) | obsidian-kimi (Kimi) |
-|------|------------------------|----------------------|
-| **AI 모델** | Claude 3.5 Sonnet/Opus | **Kimi K2.5** |
-| **컨텍스트** | 200K | **256K** ✅ |
-| **한국어** | 보통 | **우수** ✅ |
-| **중국어** | 보통 | **우수** ✅ |
-| **이미지 분석** | ✅ | ❌ 미지원 |
-| **응답 속도** | 빠름 | 중간 |
-| **가격** | $$$ | **$** ✅ |
-| **obsidian-skills** | ✅ 네이티브 | ⚠️ 어댑터 필요 |
-
----
-
 ## 💡 권장 사용 시나리오
 
 ### obsidian-code 유지
@@ -182,36 +195,27 @@ ln -s /Users/simon/.openclaw/obsidian-kimi-plugin \
 - 비용 절감
 - 빠른 한국어 응답
 
-### 병행 사용
-```json
-// ~/.claude/mcp.json
-{
-  "mcpServers": {
-    "claude": { /* obsidian-code */ },
-    "kimi": { /* obsidian-kimi */ }
-  }
-}
-```
-
 ---
 
 ## 📞 문제 해결
 
-### 빌드 오류
-```bash
-# 캐시 클리어
-rm -rf node_modules package-lock.json
+### 빌드 오류 발생 시
+```powershell
+# 캐시 클리어 및 재설치
+Remove-Item -Recurse -Force node_modules
+Remove-Item -Force package-lock.json
 npm install
 npm run build
 ```
 
 ### API 오류
 - API 키 확인: https://platform.moonshot.ai/
-- 환경 변수: `MOONSHOT_API_KEY` 설정
+- 설정에서 올바른 모델(`moonshot/kimi-k2.5`)이 선택되었는지 확인
 
 ### 플러그인 로드 안 됨
 - Obsidian 재시작
-- 개발자 도구 콘솔 확인 (Cmd+Opt+I)
+- 개발자 도구 콘솔 확인 (`Ctrl+Shift+I`)
+- `KimiChatView: Opening view (v1.0.4)` 로그가 보이는지 확인
 
 ---
 
