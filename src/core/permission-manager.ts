@@ -3,9 +3,11 @@ import { App, Modal, Setting } from 'obsidian';
 type PermissionMode = 'AUTO' | 'SAFE' | 'PLAN';
 
 export class PermissionManager {
+    private app: App;
     private mode: PermissionMode;
 
-    constructor(mode: PermissionMode = 'SAFE') {
+    constructor(app: App, mode: PermissionMode = 'SAFE') {
+        this.app = app;
         this.mode = mode;
     }
 
@@ -32,7 +34,7 @@ export class PermissionManager {
 
     private async showPermissionModal(action: string, details: string): Promise<boolean> {
         return new Promise((resolve) => {
-            const modal = new PermissionModal(action, details, (confirmed) => {
+            const modal = new PermissionModal(this.app, action, details, (confirmed) => {
                 resolve(confirmed);
             });
             modal.open();
@@ -51,7 +53,7 @@ class PermissionModal extends Modal {
     details: string;
     onConfirm: (confirmed: boolean) => void;
 
-    constructor(action: string, details: string, onConfirm: (confirmed: boolean) => void) {
+    constructor(app: App, action: string, details: string, onConfirm: (confirmed: boolean) => void) {
         super(app);
         this.action = action;
         this.details = details;
@@ -60,26 +62,26 @@ class PermissionModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
-        
+
         contentEl.createEl('h2', { text: 'Permission Required' });
-        
+
         contentEl.createEl('p', {
             text: `Kimi wants to: ${this.action}`,
             cls: 'kimi-permission-action'
         });
-        
+
         contentEl.createEl('p', {
             text: this.details,
             cls: 'kimi-permission-details'
         });
 
         const buttonContainer = contentEl.createDiv('kimi-permission-buttons');
-        
+
         const allowBtn = buttonContainer.createEl('button', {
             text: 'Allow',
             cls: 'mod-cta'
         });
-        
+
         const denyBtn = buttonContainer.createEl('button', {
             text: 'Deny'
         });

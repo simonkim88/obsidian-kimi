@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, Menu } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFile, Menu, Notice, MarkdownView } from 'obsidian';
 import ObsidianKimiPlugin from '../../main';
 
 export const VIEW_TYPE_KIMI_CHAT = 'kimi-chat-view';
@@ -48,7 +48,7 @@ export class KimiChatView extends ItemView {
         // Header
         const header = container.createDiv('kimi-chat-header');
         header.createEl('h3', { text: '🦊 Kimi' });
-        
+
         const modeIndicator = header.createSpan('kimi-mode-indicator');
         modeIndicator.textContent = `Mode: ${this.plugin.settings.permissionMode}`;
 
@@ -62,7 +62,7 @@ export class KimiChatView extends ItemView {
             this.attachedFiles.forEach(file => {
                 const chip = attachmentsDiv.createDiv('kimi-file-chip');
                 chip.textContent = file.name;
-                
+
                 const pinBtn = chip.createSpan('kimi-pin-btn');
                 pinBtn.textContent = '📌';
                 pinBtn.title = 'Pin this note';
@@ -70,7 +70,7 @@ export class KimiChatView extends ItemView {
                     this.plugin.contextManager.pinNote(file);
                     pinBtn.addClass('pinned');
                 };
-                
+
                 const removeBtn = chip.createSpan('kimi-remove-btn');
                 removeBtn.textContent = '×';
                 removeBtn.onclick = () => {
@@ -82,7 +82,7 @@ export class KimiChatView extends ItemView {
 
         // Input area
         const inputArea = container.createDiv('kimi-input-area');
-        
+
         const input = inputArea.createEl('textarea', {
             cls: 'kimi-chat-input',
             placeholder: 'Ask Kimi anything... (@ to mention files, / for commands)'
@@ -104,7 +104,7 @@ export class KimiChatView extends ItemView {
 
         // Toolbar
         const toolbar = inputArea.createDiv('kimi-toolbar');
-        
+
         const attachBtn = toolbar.createEl('button', {
             cls: 'kimi-toolbar-btn',
             text: '@ Attach'
@@ -130,7 +130,7 @@ export class KimiChatView extends ItemView {
 
     renderMessages(container: HTMLElement) {
         container.empty();
-        
+
         if (this.messages.length === 0) {
             const welcome = container.createDiv('kimi-welcome');
             welcome.innerHTML = `
@@ -150,13 +150,13 @@ export class KimiChatView extends ItemView {
 
         this.messages.forEach(msg => {
             const msgDiv = container.createDiv(`kimi-message kimi-message-${msg.role}`);
-            
+
             const header = msgDiv.createDiv('kimi-message-header');
             header.textContent = msg.role === 'user' ? 'You' : '🦊 Kimi';
-            
+
             const content = msgDiv.createDiv('kimi-message-content');
             content.innerHTML = this.formatMessage(msg.content);
-            
+
             if (msg.role === 'assistant') {
                 const actions = msgDiv.createDiv('kimi-message-actions');
                 const copyBtn = actions.createEl('button', { text: 'Copy' });
@@ -164,7 +164,7 @@ export class KimiChatView extends ItemView {
                     navigator.clipboard.writeText(msg.content);
                     new Notice('Copied!');
                 };
-                
+
                 const insertBtn = actions.createEl('button', { text: 'Insert to Note' });
                 insertBtn.onclick = () => this.insertToNote(msg.content);
             }
@@ -219,7 +219,7 @@ export class KimiChatView extends ItemView {
         try {
             // Get context
             const context = await this.plugin.contextManager.getContextString();
-            
+
             // Add attached files context
             let fullContext = context;
             if (this.attachedFiles.length > 0) {
@@ -233,7 +233,7 @@ export class KimiChatView extends ItemView {
             }
 
             let response = '';
-            
+
             // Stream response
             await this.plugin.kimiClient.generateStream(
                 userMessage,
@@ -269,7 +269,7 @@ export class KimiChatView extends ItemView {
 
     showFileMenu(button: HTMLElement) {
         const menu = new Menu();
-        
+
         const files = this.app.vault.getMarkdownFiles();
         files.slice(0, 20).forEach(file => {
             menu.addItem((item) => {
@@ -284,7 +284,8 @@ export class KimiChatView extends ItemView {
             });
         });
 
-        menu.showAtElement(button);
+        const rect = button.getBoundingClientRect();
+        menu.showAtPosition({ x: rect.left, y: rect.bottom });
     }
 
     async pinCurrentNote() {
@@ -304,8 +305,9 @@ export class KimiChatView extends ItemView {
             return;
         }
 
-        const editor = this.app.workspace.getActiveViewOfType(require('obsidian').MarkdownView)?.editor;
-        if (editor) {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (view) {
+            const editor = view.editor;
             const cursor = editor.getCursor();
             editor.replaceRange(content, cursor);
             new Notice('Inserted!');

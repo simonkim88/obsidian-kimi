@@ -1,6 +1,6 @@
 {
   "name": "obsidian-kimi",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Kimi K2.5 integration for Obsidian",
   "main": "main.js",
   "scripts": {
@@ -8,7 +8,13 @@
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "version": "node version-bump.mjs && git add manifest.json versions.json"
   },
-  "keywords": ["obsidian", "plugin", "kimi", "ai", "moonshot"],
+  "keywords": [
+    "obsidian",
+    "plugin",
+    "kimi",
+    "ai",
+    "moonshot"
+  ],
   "author": "Simon",
   "license": "MIT",
   "devDependencies": {

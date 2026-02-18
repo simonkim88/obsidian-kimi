@@ -37,9 +37,9 @@ export default class ObsidianKimiPlugin extends Plugin {
             temperature: this.settings.temperature,
             maxTokens: this.settings.maxTokens,
         });
-        
+
         this.contextManager = new ContextManager(this.app);
-        this.permissionManager = new PermissionManager(this.settings.permissionMode);
+        this.permissionManager = new PermissionManager(this.app, this.settings.permissionMode);
 
         // Register view
         this.registerView(
@@ -102,7 +102,7 @@ export default class ObsidianKimiPlugin extends Plugin {
 
     async activateView() {
         const { workspace } = this.app;
-        
+
         let leaf: WorkspaceLeaf | null = null;
         const leaves = workspace.getLeavesOfType(VIEW_TYPE_KIMI_CHAT);
 
@@ -125,7 +125,7 @@ export default class ObsidianKimiPlugin extends Plugin {
         }
 
         const content = await this.app.vault.read(file);
-        
+
         if (this.settings.permissionMode !== 'AUTO') {
             const confirmed = await this.permissionManager.requestPermission(
                 'Summarize note',
@@ -135,14 +135,14 @@ export default class ObsidianKimiPlugin extends Plugin {
         }
 
         new Notice('Kimi is summarizing...');
-        
+
         try {
             const summary = await this.kimiClient.summarize(content);
-            
+
             // Insert summary at the top of the note
             const summaryBlock = `\n> [!summary] AI Summary\n> ${summary.replace(/\n/g, '\n> ')}\n\n`;
             const newContent = summaryBlock + content;
-            
+
             await this.app.vault.modify(file, newContent);
             new Notice('Summary added!');
         } catch (error) {
@@ -152,7 +152,7 @@ export default class ObsidianKimiPlugin extends Plugin {
 
     async inlineEdit(editor: Editor) {
         const selection = editor.getSelection();
-        
+
         if (!selection) {
             new Notice('Please select text to edit');
             return;
@@ -163,10 +163,10 @@ export default class ObsidianKimiPlugin extends Plugin {
             if (!instruction) return;
 
             new Notice('Kimi is editing...');
-            
+
             try {
                 const edited = await this.kimiClient.edit(selection, instruction);
-                
+
                 // Replace selection
                 editor.replaceSelection(edited);
                 new Notice('Edit applied!');
@@ -174,7 +174,7 @@ export default class ObsidianKimiPlugin extends Plugin {
                 new Notice('Error: ' + error.message);
             }
         });
-        
+
         modal.open();
     }
 }
@@ -191,22 +191,22 @@ class InlineEditModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
-        
+
         contentEl.createEl('h2', { text: 'Inline Edit with Kimi' });
-        
-        contentEl.createEl('p', { 
+
+        contentEl.createEl('p', {
             text: 'Selected text:',
             cls: 'kimi-modal-label'
         });
-        
+
         const preview = contentEl.createEl('pre', {
-            text: this.selection.length > 200 
-                ? this.selection.substring(0, 200) + '...' 
+            text: this.selection.length > 200
+                ? this.selection.substring(0, 200) + '...'
                 : this.selection,
             cls: 'kimi-selection-preview'
         });
-        
-        contentEl.createEl('p', { 
+
+        contentEl.createEl('p', {
             text: 'How would you like to edit this?',
             cls: 'kimi-modal-label'
         });
@@ -218,12 +218,12 @@ class InlineEditModal extends Modal {
         input.rows = 3;
 
         const buttonContainer = contentEl.createDiv('kimi-modal-buttons');
-        
+
         const submitBtn = buttonContainer.createEl('button', {
             text: 'Edit',
             cls: 'mod-cta'
         });
-        
+
         const cancelBtn = buttonContainer.createEl('button', {
             text: 'Cancel'
         });
