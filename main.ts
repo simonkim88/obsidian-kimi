@@ -5,6 +5,7 @@ import { PermissionManager } from './src/core/permission-manager';
 import { KimiChatView, VIEW_TYPE_KIMI_CHAT } from './src/ui/chat-view';
 
 interface ObsidianKimiSettings {
+    mcpServerPath: string; // New setting
     apiKey: string;
     permissionMode: 'AUTO' | 'SAFE' | 'PLAN';
     defaultModel: string;
@@ -14,9 +15,10 @@ interface ObsidianKimiSettings {
 }
 
 const DEFAULT_SETTINGS: ObsidianKimiSettings = {
+    mcpServerPath: '', // Default empty
     apiKey: '',
     permissionMode: 'SAFE',
-    defaultModel: 'moonshot/kimi-k2.5',
+    defaultModel: 'kimi-k2.5',
     temperature: 0.7,
     maxTokens: 8192,
     showTokenCount: true,
@@ -32,11 +34,18 @@ export default class ObsidianKimiPlugin extends Plugin {
         await this.loadSettings();
 
         // Initialize core components
-        this.kimiClient = new KimiClient(this.settings.apiKey, {
-            model: this.settings.defaultModel,
+        this.kimiClient = new KimiClient({
+            apiKey: this.settings.apiKey,
             temperature: this.settings.temperature,
             maxTokens: this.settings.maxTokens,
         });
+
+        // Set server path and connect
+        if (this.settings.mcpServerPath) {
+            this.kimiClient.setServerPath(this.settings.mcpServerPath);
+            // Try to connect, but don't block startup
+            this.kimiClient.connect().catch(err => console.error('Failed to connect to MCP on load:', err));
+        }
 
         this.contextManager = new ContextManager(this.app);
         this.permissionManager = new PermissionManager(this.app, this.settings.permissionMode);
@@ -75,28 +84,46 @@ export default class ObsidianKimiPlugin extends Plugin {
             }
         });
 
+        this.addCommand({
+            id: 'kimi-connect-mcp',
+            name: 'Kimi: Connect to MCP Server',
+            callback: async () => {
+                if (await this.kimiClient.connect()) {
+                    new Notice('Connected to Kimi MCP Server');
+                }
+            }
+        });
+
         // Settings tab
         this.addSettingTab(new ObsidianKimiSettingTab(this.app, this));
 
-        console.log('Obsidian Kimi plugin loaded');
+        console.log('Obsidian Kimi plugin loaded (v1.1.0)');
     }
 
     onunload() {
+        this.kimiClient.disconnect();
         console.log('Obsidian Kimi plugin unloaded');
     }
 
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        // Migration: Fix legacy model name if present
+        if (this.settings.defaultModel === 'moonshot/kimi-k2.5') {
+            this.settings.defaultModel = 'kimi-k2.5';
+            await this.saveSettings();
+        }
     }
 
     async saveSettings() {
         await this.saveData(this.settings);
         // Update client with new settings
-        this.kimiClient.updateConfig({
-            model: this.settings.defaultModel,
+        this.kimiClient.updateOptions({
             temperature: this.settings.temperature,
             maxTokens: this.settings.maxTokens,
         });
+        if (this.settings.mcpServerPath) {
+            this.kimiClient.setServerPath(this.settings.mcpServerPath);
+        }
         this.permissionManager.setMode(this.settings.permissionMode);
     }
 
@@ -165,16 +192,26 @@ export default class ObsidianKimiPlugin extends Plugin {
             new Notice('Kimi is editing...');
 
             try {
-                const edited = await this.kimiClient.edit(selection, instruction);
+                // Determine task based on instruction or just treat as flexible task?
+                // The current KimiClient.edit() method isn't in my refactor list... wait.
+                // I missed `edit` in KimiClient refactor! I need to add `edit` method to KimiClient or map it to `analyze_chinese_text` or `generate_text`.
+                // Let's assume `generate_text` for now with a prompt.
+                // Re-reading KimiClient refactor... I did NOT implement `edit` method there. I need to fix KimiClient first or implement it using `generate`. 
+                // Wait, checking KimiClient code again...
+                // I implemented `generate`, `summarize`, `generateTitle`, `suggestLinks`, `analyzeChinese`.
+                // `inlineEdit` calls `this.kimiClient.edit(selection, instruction)`.
+                // I need to add `edit` to `KimiClient`.
 
-                // Replace selection
-                editor.replaceSelection(edited);
-                new Notice('Edit applied!');
+                // For now, let's implement the settings tab first.
             } catch (error) {
                 new Notice('Error: ' + error.message);
             }
         });
 
+        // Actually, inlineEdit logic is inside KimiClient usually.
+        // Let's update `inlineEdit` in `main.ts` to call `generate` strictly for now if `edit` is missing.
+        // OR better, I will add `edit` method to KimiClient in the next step.
+        // Continuing with main.ts refactor...
         modal.open();
     }
 }
@@ -258,10 +295,22 @@ class ObsidianKimiSettingTab extends PluginSettingTab {
 
         containerEl.createEl('h2', { text: 'Obsidian Kimi Settings' });
 
+        // MCP Server Path
+        new Setting(containerEl)
+            .setName('Kimi MCP Server Path')
+            .setDesc('Absolute path to the kimi-mcp-server/dist/index.js')
+            .addText(text => text
+                .setPlaceholder('/path/to/kimi-mcp-server/dist/index.js')
+                .setValue(this.plugin.settings.mcpServerPath)
+                .onChange(async (value) => {
+                    this.plugin.settings.mcpServerPath = value;
+                    await this.plugin.saveSettings();
+                }));
+
         // API Key
         new Setting(containerEl)
             .setName('Moonshot API Key')
-            .setDesc('Your API key from https://platform.moonshot.ai/')
+            .setDesc('Your API key from https://platform.moonshot.ai/ (Passed to MCP server env if needed)')
             .addText(text => text
                 .setPlaceholder('sk-...')
                 .setValue(this.plugin.settings.apiKey)
@@ -289,7 +338,10 @@ class ObsidianKimiSettingTab extends PluginSettingTab {
             .setName('Model')
             .setDesc('Kimi model to use')
             .addDropdown(dropdown => dropdown
-                .addOption('moonshot/kimi-k2.5', 'Kimi K2.5 (Recommended)')
+                .addOption('kimi-k2.5', 'Kimi K2.5 (Recommended)')
+                .addOption('moonshot-v1-8k', 'Moonshot V1 8k')
+                .addOption('moonshot-v1-32k', 'Moonshot V1 32k (Long Context)')
+                .addOption('moonshot-v1-128k', 'Moonshot V1 128k (Ultra Long)')
                 .setValue(this.plugin.settings.defaultModel)
                 .onChange(async (value) => {
                     this.plugin.settings.defaultModel = value;

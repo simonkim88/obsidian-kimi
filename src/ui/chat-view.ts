@@ -285,22 +285,49 @@ export class KimiChatView extends ItemView {
             this.messages.push(assistantMsg);
             this.appendMessage(assistantMsg);
 
-            // Stream response
-            await this.plugin.kimiClient.generateStream(
-                userMessageContent,
-                (chunk) => {
-                    response += chunk;
+            // Construct history for chat
+            // Exclude the current user message and the placeholder assistant message we just added
+            // Also exclude the initial "..." placeholder if it exists in history logic (but here we construct from this.messages)
+            // KimiClient.chat expects history of previous turns.
+            const history = this.messages.slice(0, this.messages.length - 2).map(m => ({
+                role: m.role,
+                content: m.content
+            }));
 
-                    // Update last message in state
-                    this.messages[this.messages.length - 1].content = response;
+            // Add attached files to the user message if present
+            let finalMessage = userMessageContent;
+            if (this.attachedFiles.length > 0) {
+                const fileContents = await Promise.all(
+                    this.attachedFiles.map(async f => {
+                        const content = await this.app.vault.read(f);
+                        return `## ${f.name}\n${content.substring(0, 3000)}`;
+                    })
+                );
+                const contextString = fileContents.join('\n\n---\n\n');
+                finalMessage = `Context:\n${contextString}\n\nUser Request:\n${userMessageContent}`;
+            } else {
+                // Check context manager for pinned notes if no explicit attachments
+                const context = await this.plugin.contextManager.getContextString();
+                if (context) {
+                    finalMessage = `Context:\n${context}\n\nUser Request:\n${userMessageContent}`;
+                }
+            }
 
-                    // Update UI
-                    this.updateLastMessage(response);
-                },
-                fullContext || undefined
-            );
+            // Call Chat Tool (Non-streaming for now)
+            response = await this.plugin.kimiClient.chat(finalMessage, history);
+
+            // Update last message in state
+            this.messages[this.messages.length - 1].content = response;
+
+            // Update UI
+            this.updateLastMessage(response);
 
         } catch (error) {
+            // If error, remove the placeholder or update it
+            this.messages.pop(); // Remove placeholder from state
+            const lastMsgEl = this.messagesContainer.lastElementChild;
+            if (lastMsgEl) lastMsgEl.remove(); // Remove ... bubble from UI
+
             const errorMsg: Message = {
                 role: 'assistant',
                 content: `Error: ${error.message}`,

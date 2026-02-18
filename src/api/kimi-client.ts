@@ -1,140 +1,179 @@
-import OpenAI from 'openai';
+import { Notice } from 'obsidian';
+import { MCPClientManager } from './mcp-client';
 
-interface KimiConfig {
-    model: string;
-    temperature: number;
-    maxTokens: number;
+export interface KimiClientOptions {
+    apiKey: string;
+    temperature?: number;
+    maxTokens?: number;
 }
 
 export class KimiClient {
-    private client: OpenAI;
-    private config: KimiConfig;
+    private mcpManager: MCPClientManager;
+    private options: KimiClientOptions;
 
-    constructor(apiKey: string, config: KimiConfig) {
-        this.client = new OpenAI({
-            apiKey: apiKey || 'dummy', // Prevent crash on empty key
-            baseURL: 'https://api.moonshot.ai/v1',
-            dangerouslyAllowBrowser: true // Required for Obsidian environment
-        });
-        this.config = config;
+    constructor(options: KimiClientOptions) {
+        this.options = options;
+        this.mcpManager = new MCPClientManager();
+        if (options.apiKey) {
+            this.mcpManager.setApiKey(options.apiKey);
+        }
     }
 
-    updateConfig(config: Partial<KimiConfig>) {
-        this.config = { ...this.config, ...config };
+    setServerPath(path: string) {
+        this.mcpManager.setServerPath(path);
+        if (this.options.apiKey) {
+            this.mcpManager.setApiKey(this.options.apiKey);
+        }
     }
 
-    updateApiKey(apiKey: string) {
-        this.client = new OpenAI({
-            apiKey: apiKey || 'dummy',
-            baseURL: 'https://api.moonshot.ai/v1',
-            dangerouslyAllowBrowser: true
-        });
+    async connect() {
+        return await this.mcpManager.connect();
+    }
+
+    async disconnect() {
+        await this.mcpManager.disconnect();
+    }
+
+    isConnected() {
+        return this.mcpManager.isConnected();
+    }
+
+    updateOptions(newOptions: Partial<KimiClientOptions>) {
+        this.options = { ...this.options, ...newOptions };
+        if (newOptions.apiKey) {
+            this.mcpManager.setApiKey(newOptions.apiKey);
+        }
     }
 
     async generate(prompt: string, context?: string): Promise<string> {
-        const fullPrompt = context
-            ? `Context:\n${context}\n\nUser: ${prompt}`
-            : prompt;
-
-        try {
-            const response = await this.client.chat.completions.create({
-                model: this.config.model,
-                messages: [{ role: 'user', content: fullPrompt }],
-                temperature: this.config.temperature,
-                max_tokens: this.config.maxTokens,
-            });
-
-            return response.choices[0]?.message?.content || '';
-        } catch (error) {
-            console.error('Kimi API Error:', error);
-            throw new Error('Failed to generate response: ' + error.message);
+        if (!this.isConnected()) {
+            new Notice('Kimi MCP server not connected');
+            return '';
         }
-    }
-
-    async generateStream(
-        prompt: string,
-        onChunk: (chunk: string) => void,
-        context?: string
-    ): Promise<void> {
-        const fullPrompt = context
-            ? `Context:\n${context}\n\nUser: ${prompt}`
-            : prompt;
 
         try {
-            const stream = await this.client.chat.completions.create({
-                model: this.config.model,
-                messages: [{ role: 'user', content: fullPrompt }],
-                temperature: this.config.temperature,
-                max_tokens: this.config.maxTokens,
-                stream: true,
+            const result = await this.mcpManager.callTool('generate_text', {
+                prompt,
+                context,
+                temperature: this.options.temperature,
+                maxTokens: this.options.maxTokens
             });
 
-            for await (const chunk of stream) {
-                const content = chunk.choices[0]?.delta?.content || '';
-                if (content) {
-                    onChunk(content);
-                }
+            if (result.isError) {
+                throw new Error(result.content[0].text);
             }
+
+            return result.content[0].text;
         } catch (error) {
-            console.error('Kimi API Streaming Error:', error);
-            throw new Error('Failed to stream response: ' + error.message);
+            console.error('Kimi generation failed:', error);
+            new Notice('Failed to generate response');
+            throw error;
         }
     }
 
-    async chat(messages: Array<{ role: 'user' | 'assistant', content: string }>): Promise<string> {
+    async generateStream(prompt: string, onChunk: (chunk: string) => void, context?: string): Promise<void> {
+        // MCP streaming not yet fully standardized or implemented in our server.
+        // Fallback to non-streaming for now, simulating stream by returning full response at once.
+        // Or we could implement a custom streaming tool if needed.
+        const response = await this.generate(prompt, context);
+        onChunk(response);
+    }
+
+    async summarize(content: string): Promise<string> {
+        if (!this.isConnected()) {
+            new Notice('Kimi MCP server not connected');
+            return '';
+        }
+
         try {
-            const response = await this.client.chat.completions.create({
-                model: this.config.model,
-                messages: messages.map(m => ({ role: m.role, content: m.content })),
-                temperature: this.config.temperature,
-                max_tokens: this.config.maxTokens,
+            const result = await this.mcpManager.callTool('summarize_note', {
+                content,
+                style: 'bullet-points'
             });
 
-            return response.choices[0]?.message?.content || '';
+            return result.content[0].text;
         } catch (error) {
-            console.error('Kimi Chat Error:', error);
-            throw new Error('Failed to chat: ' + error.message);
+            console.error('Summarization failed:', error);
+            new Notice('Failed to summarize note');
+            throw error;
         }
     }
 
-    async summarize(content: string, style: 'brief' | 'detailed' | 'bullet-points' = 'bullet-points'): Promise<string> {
-        const prompt = `Please summarize the following content in ${style} style in Korean:\n\n${content}`;
-        return this.generate(prompt);
-    }
+    async generateTitle(content: string, currentTitle?: string): Promise<string> {
+        if (!this.isConnected()) return '';
 
-    async edit(text: string, instruction: string): Promise<string> {
-        const prompt = `Original text:\n${text}\n\nInstruction: ${instruction}\n\nPlease provide only the edited text, without any explanation:`;
-        return this.generate(prompt);
-    }
-
-    async generateTitle(content: string): Promise<string> {
-        const prompt = `Based on the following content, suggest a concise title (2-6 words) in Korean:\n\n${content}\n\nTitle:`;
-        const title = await this.generate(prompt);
-        return title.trim();
-    }
-
-    async suggestLinks(content: string, existingNotes: string[]): Promise<string[]> {
-        const prompt = `Based on the content, suggest relevant links from: ${existingNotes.join(', ')}\n\nContent:\n${content}\n\nSuggested links (in [[Note Name]] format):`;
-        const response = await this.generate(prompt);
-
-        // Parse wikilinks from response
-        const links: string[] = [];
-        const regex = /\[\[([^\]]+)\]\]/g;
-        let match;
-        while ((match = regex.exec(response)) !== null) {
-            links.push(match[1]);
+        try {
+            const result = await this.mcpManager.callTool('generate_note_title', {
+                content,
+                currentTitle
+            });
+            return result.content[0].text;
+        } catch (error) {
+            console.error('Title generation failed:', error);
+            return '';
         }
-        return links;
     }
 
-    async analyzeChinese(content: string, task: 'translate' | 'summarize' | 'explain' = 'summarize', targetLang: 'korean' | 'english' = 'korean'): Promise<string> {
-        const taskMap = {
-            translate: `Translate to ${targetLang}:`,
-            summarize: `Summarize in ${targetLang}:`,
-            explain: `Explain meaning and context in ${targetLang}:`,
-        };
+    async suggestLinks(content: string, vaultNotes: string[]): Promise<string[]> {
+        if (!this.isConnected()) return [];
 
-        const prompt = `${taskMap[task]}\n\n${content}`;
-        return this.generate(prompt);
+        try {
+            const result = await this.mcpManager.callTool('suggest_links', {
+                content,
+                vaultNotes
+            });
+            const text = result.content[0].text;
+            return text.split('\n').map((link: string) => link.trim()).filter((link: string) => link.length > 0);
+        } catch (error) {
+            console.error('Link suggestion failed:', error);
+            return [];
+        }
+    }
+
+    async analyzeChinese(content: string, task: 'translate' | 'summarize' | 'explain' = 'explain'): Promise<string> {
+        if (!this.isConnected()) return '';
+
+        try {
+            const result = await this.mcpManager.callTool('analyze_chinese_text', {
+                content,
+                task
+            });
+            return result.content[0].text;
+        } catch (error) {
+            console.error('Chinese analysis failed:', error);
+            return '';
+        }
+    }
+
+    async edit(selection: string, instruction: string): Promise<string> {
+        if (!this.isConnected()) {
+            throw new Error('Kimi MCP server not connected');
+        }
+
+        try {
+            const prompt = `Edit the following text based on the instruction: "${instruction}"\n\nText:\n${selection}`;
+            return await this.generate(prompt);
+        } catch (error) {
+            console.error('Edit failed:', error);
+            throw error;
+        }
+    }
+
+    // Additional helper for chat view which sends history
+    async chat(message: string, history: { role: string, content: string }[]): Promise<string> {
+        if (!this.isConnected()) {
+            throw new Error('Kimi MCP server not connected');
+        }
+
+        const result = await this.mcpManager.callTool('chat', {
+            message,
+            history
+        });
+
+        if (result.isError) {
+            throw new Error(result.content[0].text);
+        }
+
+        return result.content[0].text;
     }
 }
