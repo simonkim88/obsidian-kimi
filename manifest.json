@@ -1,0 +1,11 @@
+{
+  "id": "obsidian-kimi",
+  "name": "Obsidian Kimi",
+  "version": "0.1.0",
+  "minAppVersion": "0.15.0",
+  "description": "Kimi K2.5 integration for Obsidian - Similar to Obsidian Code",
+  "author": "Simon",
+  "authorUrl": "",
+  "fundingUrl": "",
+  "isDesktopOnly": true
+}

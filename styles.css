@@ -1,0 +1,380 @@
+/* Obsidian Kimi Plugin Styles */
+
+/* Chat View Styles */
+.kimi-chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: var(--size-4-3);
+}
+
+.kimi-chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: var(--size-4-2);
+    border-bottom: 1px solid var(--background-modifier-border);
+    margin-bottom: var(--size-4-2);
+}
+
+.kimi-chat-header h3 {
+    margin: 0;
+}
+
+.kimi-mode-indicator {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    padding: 2px 8px;
+    background: var(--background-secondary);
+    border-radius: 4px;
+}
+
+.kimi-messages-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--size-4-2) 0;
+}
+
+/* Welcome Screen */
+.kimi-welcome {
+    text-align: center;
+    color: var(--text-muted);
+    padding: var(--size-4-8);
+}
+
+.kimi-welcome h4 {
+    margin-bottom: var(--size-4-4);
+}
+
+.kimi-welcome ul {
+    text-align: left;
+    display: inline-block;
+    margin: var(--size-4-4) 0;
+}
+
+.kimi-welcome li {
+    margin: var(--size-4-1) 0;
+}
+
+.kimi-hint {
+    font-size: var(--font-ui-small);
+    margin-top: var(--size-4-6);
+    padding: var(--size-4-3);
+    background: var(--background-secondary);
+    border-radius: var(--radius-s);
+    border-left: 3px solid var(--interactive-accent);
+}
+
+/* Message Bubbles */
+.kimi-message {
+    margin-bottom: var(--size-4-4);
+    padding: var(--size-4-3);
+    border-radius: var(--radius-m);
+    animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.kimi-message-user {
+    background: var(--background-secondary);
+    margin-left: var(--size-4-8);
+}
+
+.kimi-message-assistant {
+    background: var(--background-primary-alt);
+    margin-right: var(--size-4-8);
+    border-left: 3px solid var(--interactive-accent);
+}
+
+.kimi-message-header {
+    font-weight: 600;
+    margin-bottom: var(--size-4-1);
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: var(--size-4-1);
+}
+
+.kimi-message-content {
+    line-height: 1.6;
+    font-size: var(--font-ui-medium);
+}
+
+.kimi-message-content p {
+    margin: var(--size-4-2) 0;
+}
+
+.kimi-message-content p:first-child {
+    margin-top: 0;
+}
+
+.kimi-message-content p:last-child {
+    margin-bottom: 0;
+}
+
+/* Code Blocks */
+.kimi-message-content pre {
+    background: var(--background-secondary);
+    padding: var(--size-4-3);
+    border-radius: var(--radius-s);
+    overflow-x: auto;
+    margin: var(--size-4-2) 0;
+}
+
+.kimi-message-content code {
+    font-family: var(--font-monospace);
+    font-size: 0.9em;
+}
+
+.kimi-message-content :not(pre) > code {
+    background: var(--background-secondary);
+    padding: 2px 6px;
+    border-radius: var(--radius-xs);
+}
+
+/* Message Actions */
+.kimi-message-actions {
+    margin-top: var(--size-4-2);
+    display: flex;
+    gap: var(--size-4-2);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.kimi-message:hover .kimi-message-actions {
+    opacity: 1;
+}
+
+.kimi-message-actions button {
+    padding: var(--size-4-1) var(--size-4-2);
+    font-size: var(--font-ui-smaller);
+    background: transparent;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.kimi-message-actions button:hover {
+    background: var(--background-secondary);
+    border-color: var(--interactive-accent);
+}
+
+/* Attachments */
+.kimi-attachments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-4-2);
+    padding: var(--size-4-2) 0;
+}
+
+.kimi-file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--size-4-1);
+    padding: var(--size-4-1) var(--size-4-2);
+    background: var(--background-secondary);
+    border-radius: var(--radius-l);
+    font-size: var(--font-ui-small);
+    border: 1px solid var(--background-modifier-border);
+}
+
+.kimi-pin-btn {
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+
+.kimi-pin-btn:hover {
+    opacity: 0.8;
+}
+
+.kimi-pin-btn.pinned {
+    opacity: 1;
+}
+
+.kimi-remove-btn {
+    cursor: pointer;
+    opacity: 0.5;
+    font-weight: bold;
+    padding: 0 2px;
+    transition: opacity 0.2s;
+}
+
+.kimi-remove-btn:hover {
+    opacity: 1;
+    color: var(--text-error);
+}
+
+/* Input Area */
+.kimi-input-area {
+    border-top: 1px solid var(--background-modifier-border);
+    padding-top: var(--size-4-3);
+}
+
+.kimi-chat-input {
+    width: 100%;
+    resize: none;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    padding: var(--size-4-3);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-family: var(--font-interface);
+    font-size: var(--font-ui-medium);
+    line-height: 1.5;
+    transition: border-color 0.2s;
+}
+
+.kimi-chat-input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+    box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.kimi-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--size-4-2);
+}
+
+.kimi-toolbar-left {
+    display: flex;
+    gap: var(--size-4-2);
+}
+
+.kimi-toolbar-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--size-2-2);
+    padding: var(--size-4-2) var(--size-4-3);
+    font-size: var(--font-ui-small);
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.kimi-toolbar-btn:hover {
+    background: var(--background-secondary-alt);
+    border-color: var(--interactive-accent-hover);
+}
+
+.kimi-send-btn {
+    padding: var(--size-4-2) var(--size-4-6);
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border: none;
+    border-radius: var(--radius-s);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.kimi-send-btn:hover {
+    background: var(--interactive-accent-hover);
+}
+
+.kimi-send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Modal Styles */
+.kimi-permission-action {
+    font-size: var(--font-ui-large);
+    font-weight: 600;
+    margin-bottom: var(--size-4-3);
+}
+
+.kimi-permission-details {
+    color: var(--text-muted);
+    margin-bottom: var(--size-4-6);
+    padding: var(--size-4-3);
+    background: var(--background-secondary);
+    border-radius: var(--radius-s);
+}
+
+.kimi-permission-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--size-4-3);
+}
+
+.kimi-modal-label {
+    font-weight: 600;
+    margin-top: var(--size-4-4);
+    margin-bottom: var(--size-4-2);
+}
+
+.kimi-selection-preview {
+    background: var(--background-secondary);
+    padding: var(--size-4-3);
+    border-radius: var(--radius-s);
+    margin: var(--size-4-3) 0;
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-small);
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.kimi-instruction-input {
+    width: 100%;
+    resize: none;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    padding: var(--size-4-3);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-family: var(--font-interface);
+    font-size: var(--font-ui-medium);
+}
+
+.kimi-modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--size-4-3);
+    margin-top: var(--size-4-6);
+}
+
+/* Settings Tab */
+.kimi-setting-description {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    margin-top: var(--size-4-1);
+}
+
+/* Scrollbar Styling */
+.kimi-messages-area::-webkit-scrollbar {
+    width: 8px;
+}
+
+.kimi-messages-area::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.kimi-messages-area::-webkit-scrollbar-thumb {
+    background: var(--background-modifier-border);
+    border-radius: var(--radius-l);
+}
+
+.kimi-messages-area::-webkit-scrollbar-thumb:hover {
+    background: var(--background-modifier-border-hover);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .kimi-message-user {
+        margin-left: var(--size-4-2);
+    }
+    
+    .kimi-message-assistant {
+        margin-right: var(--size-4-2);
+    }
+}
